@@ -1,0 +1,75 @@
+### Register customer
+POST http://localhost:8080/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "bob",
+  "password": "password123"
+}
+
+### Login as customer
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "alice",
+  "password": "password123"
+}
+
+### List products
+GET http://localhost:8080/api/products
+Authorization: Bearer {{token}}
+
+### Quote product
+POST http://localhost:8080/api/products/1/quote
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "quantity": 5,
+  "customerTier": "VIP"
+}
+
+### Checkout success
+POST http://localhost:8080/api/orders/checkout
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "paymentMode": "MOCK_OK",
+  "items": [
+    {
+      "productId": 1,
+      "quantity": 2,
+      "unitPrice": 399.00
+    }
+  ]
+}
+
+### Checkout failure with compensation
+POST http://localhost:8080/api/orders/checkout
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "paymentMode": "MOCK_FAIL",
+  "items": [
+    {
+      "productId": 2,
+      "quantity": 1,
+      "unitPrice": 899.00
+    }
+  ]
+}
+
+### My orders
+GET http://localhost:8080/api/orders/my
+Authorization: Bearer {{token}}
+
+### Inventory
+GET http://localhost:8080/api/inventory
+Authorization: Bearer {{token}}
+
+### My notifications
+GET http://localhost:8080/api/notifications/my
+Authorization: Bearer {{token}}

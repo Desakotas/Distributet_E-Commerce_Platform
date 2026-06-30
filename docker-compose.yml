@@ -1,0 +1,243 @@
+name: distributed-ecommerce-demo
+
+x-jwt-env: &jwt-env
+  JWT_SECRET: course-demo-secret-key-please-change-32-bytes-minimum
+
+x-kafka-env: &kafka-env
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+
+services:
+  kafka:
+    image: bitnamilegacy/kafka:3.7
+    environment:
+      KAFKA_CFG_NODE_ID: 1
+      KAFKA_CFG_PROCESS_ROLES: broker,controller
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:29092
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:29092
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CFG_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+    ports:
+      - "29092:29092"
+
+  catalog-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: catalog
+      POSTGRES_USER: catalog
+      POSTGRES_PASSWORD: catalog
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U catalog -d catalog"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - catalog-db-data:/var/lib/postgresql/data
+
+  auth-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: auth
+      POSTGRES_USER: auth
+      POSTGRES_PASSWORD: auth
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auth -d auth"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - auth-db-data:/var/lib/postgresql/data
+
+  order-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: orders
+      POSTGRES_USER: orders
+      POSTGRES_PASSWORD: orders
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orders -d orders"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - order-db-data:/var/lib/postgresql/data
+
+  inventory-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: inventory
+      POSTGRES_USER: inventory
+      POSTGRES_PASSWORD: inventory
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U inventory -d inventory"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - inventory-db-data:/var/lib/postgresql/data
+
+  payment-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: payments
+      POSTGRES_USER: payments
+      POSTGRES_PASSWORD: payments
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U payments -d payments"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - payment-db-data:/var/lib/postgresql/data
+
+  notification-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: notifications
+      POSTGRES_USER: notifications
+      POSTGRES_PASSWORD: notifications
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U notifications -d notifications"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - notification-db-data:/var/lib/postgresql/data
+
+  auth-service:
+    build:
+      context: .
+      args:
+        MODULE: auth-service
+    environment:
+      <<: *jwt-env
+      SPRING_DATASOURCE_URL: jdbc:postgresql://auth-db:5432/auth
+      SPRING_DATASOURCE_USERNAME: auth
+      SPRING_DATASOURCE_PASSWORD: auth
+    depends_on:
+      auth-db:
+        condition: service_healthy
+    expose:
+      - "8081"
+
+  catalog-service:
+    build:
+      context: .
+      args:
+        MODULE: catalog-service
+    environment:
+      <<: *jwt-env
+      SPRING_DATASOURCE_URL: jdbc:postgresql://catalog-db:5432/catalog
+      SPRING_DATASOURCE_USERNAME: catalog
+      SPRING_DATASOURCE_PASSWORD: catalog
+    depends_on:
+      catalog-db:
+        condition: service_healthy
+    expose:
+      - "8082"
+
+  order-service:
+    build:
+      context: .
+      args:
+        MODULE: order-service
+    environment:
+      <<: [*jwt-env, *kafka-env]
+      SPRING_DATASOURCE_URL: jdbc:postgresql://order-db:5432/orders
+      SPRING_DATASOURCE_USERNAME: orders
+      SPRING_DATASOURCE_PASSWORD: orders
+    depends_on:
+      kafka:
+        condition: service_started
+      order-db:
+        condition: service_healthy
+    expose:
+      - "8083"
+
+  inventory-service:
+    build:
+      context: .
+      args:
+        MODULE: inventory-service
+    environment:
+      <<: [*jwt-env, *kafka-env]
+      SPRING_DATASOURCE_URL: jdbc:postgresql://inventory-db:5432/inventory
+      SPRING_DATASOURCE_USERNAME: inventory
+      SPRING_DATASOURCE_PASSWORD: inventory
+    depends_on:
+      kafka:
+        condition: service_started
+      inventory-db:
+        condition: service_healthy
+    expose:
+      - "8084"
+
+  payment-service:
+    build:
+      context: .
+      args:
+        MODULE: payment-service
+    environment:
+      <<: [*jwt-env, *kafka-env]
+      SPRING_DATASOURCE_URL: jdbc:postgresql://payment-db:5432/payments
+      SPRING_DATASOURCE_USERNAME: payments
+      SPRING_DATASOURCE_PASSWORD: payments
+    depends_on:
+      kafka:
+        condition: service_started
+      payment-db:
+        condition: service_healthy
+    expose:
+      - "8085"
+
+  notification-service:
+    build:
+      context: .
+      args:
+        MODULE: notification-service
+    environment:
+      <<: [*jwt-env, *kafka-env]
+      SPRING_DATASOURCE_URL: jdbc:postgresql://notification-db:5432/notifications
+      SPRING_DATASOURCE_USERNAME: notifications
+      SPRING_DATASOURCE_PASSWORD: notifications
+    depends_on:
+      kafka:
+        condition: service_started
+      notification-db:
+        condition: service_healthy
+    expose:
+      - "8086"
+
+  api-gateway:
+    build:
+      context: .
+      args:
+        MODULE: api-gateway
+    environment:
+      <<: *jwt-env
+      AUTH_SERVICE_URL: http://auth-service:8081
+      CATALOG_SERVICE_URL: http://catalog-service:8082
+      ORDER_SERVICE_URL: http://order-service:8083
+      INVENTORY_SERVICE_URL: http://inventory-service:8084
+      PAYMENT_SERVICE_URL: http://payment-service:8085
+      NOTIFICATION_SERVICE_URL: http://notification-service:8086
+    depends_on:
+      - auth-service
+      - catalog-service
+      - order-service
+      - inventory-service
+      - payment-service
+      - notification-service
+    ports:
+      - "8080:8080"
+
+volumes:
+  auth-db-data:
+  catalog-db-data:
+  order-db-data:
+  inventory-db-data:
+  payment-db-data:
+  notification-db-data:

@@ -1,0 +1,30 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: auth-service
+  datasource:
+    url: jdbc:h2:mem:auth;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+
+security:
+  jwt:
+    secret: ${JWT_SECRET:course-demo-secret-key-please-change-32-bytes-minimum}
+    issuer: distributed-ecommerce-demo
+    ttl-minutes: 120
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
