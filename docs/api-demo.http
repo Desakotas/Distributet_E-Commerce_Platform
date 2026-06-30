@@ -30,6 +30,50 @@ Content-Type: application/json
   "customerTier": "VIP"
 }
 
+### Add product 1 to cart
+POST http://localhost:8080/api/cart/items
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "productId": 1,
+  "quantity": 2,
+  "unitPrice": 399.00
+}
+
+### Add product 2 to cart
+POST http://localhost:8080/api/cart/items
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "productId": 2,
+  "quantity": 1,
+  "unitPrice": 899.00
+}
+
+### View cart
+GET http://localhost:8080/api/cart
+Authorization: Bearer {{token}}
+
+### Update cart item quantity
+PUT http://localhost:8080/api/cart/items/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "quantity": 3
+}
+
+### Checkout from cart
+POST http://localhost:8080/api/orders/checkout-from-cart
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "paymentMode": "MOCK_OK"
+}
+
 ### Checkout success
 POST http://localhost:8080/api/orders/checkout
 Authorization: Bearer {{token}}

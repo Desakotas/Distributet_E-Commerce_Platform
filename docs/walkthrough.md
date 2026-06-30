@@ -43,29 +43,43 @@ curl -X POST http://localhost:8080/api/products/1/quote \
 
 Explain the pricing rules: quantity discount, customer tier discount, and a maximum discount cap.
 
+Shopping cart:
+
+```bash
+curl -X POST http://localhost:8080/api/cart/items \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"productId":1,"quantity":2,"unitPrice":399.00}'
+```
+
+Explain that the cart is stored in `order-service` because it belongs to the checkout boundary. Users can add items, update quantities, remove items, clear the cart, and then check out from the cart.
+
 ## 4. Local Transactions
 
 Code locations:
 
 | Service | Class | Method |
 | --- | --- | --- |
+| order-service | `CartService` | `checkoutFromCart` |
 | order-service | `OrderService` | `checkout` |
 | inventory-service | `InventoryService` | `reserveForOrder` |
 | payment-service | `PaymentService` | `authorize` |
 
-Also mention that order, inventory, and payment services write `OutboxEvent` rows in the same transaction as the business data.
+Also mention that cart checkout reads cart items, creates the order, writes the order outbox event, and clears the cart in one local transaction. Order, inventory, and payment services write `OutboxEvent` rows in the same transaction as the business data.
 
 ## 5. Distributed Transaction With Saga
 
 Successful flow:
 
 ```text
+cart checkout ->
 order.created -> inventory.reserved -> payment.authorized -> order PAID
 ```
 
 Failure flow:
 
 ```text
+cart checkout ->
 order.created -> inventory.reserved -> payment.failed -> order CANCELLED + inventory release
 ```
 

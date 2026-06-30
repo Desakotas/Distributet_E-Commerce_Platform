@@ -21,7 +21,7 @@ public class OrderExceptionHandler {
                 Instant.now(),
                 HttpStatus.BAD_REQUEST.value(),
                 HttpStatus.BAD_REQUEST.getReasonPhrase(),
-                "Invalid checkout request",
+                "Invalid order request",
                 request.getRequestURI()
         );
     }
